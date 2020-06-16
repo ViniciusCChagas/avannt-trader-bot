@@ -1,16 +1,20 @@
 const cheerio = require("cheerio");
 
-const { investing, formatDate } = require("./functions");
+const {
+  investing,
+  formatDate,
+  getEconomicCalendarData,
+} = require("./functions");
 const { portfolio } = require("./mapping");
 
 const { bot, chatId } = require("./teleramBot");
 
-async function sendPanoram() {
-  let country = { us: "🇺🇸", br: "🇧🇷", eu: "🇪🇺", cn: "🇨🇳" };
+const countryFlags = { EUA: "🇺🇸", BR: "🇧🇷", EUR: "🇪🇺", CN: "🇨🇳" };
 
+async function sendPanoram() {
   let data = formatDate(new Date(), "dd/MM/yyyy");
 
-  let texto = `<b>—— PANORAMA ${data} ——</b> \n`;
+  let texto = `<b>—— Panorama ${data} ——</b> \n`;
 
   console.log("Enviando: " + texto);
 
@@ -32,7 +36,7 @@ async function sendPanoram() {
         texto += `\n—————\n`;
       }
 
-      texto += `${item.country ? country[item.country] + " " : ""}${
+      texto += `${item.country ? countryFlags[item.country] + " " : ""}${
         item.name
       }  -  ${percent}`;
 
@@ -47,6 +51,64 @@ async function sendPanoram() {
   return texto;
 }
 
+async function sendEconomicCalendar() {
+  let events = await getEconomicCalendarData();
+
+  let ibovSended = false;
+  let ibovOpening = `🇧🇷 10:00h - Abertura do Mercado à vista (Brasileiro).\n`;
+  let usaOpenig = `🇺🇸 10:30h - Abertura do Mercado à vista (Americano).\n`;
+  let usaSended = false;
+
+  let date = formatDate(new Date(), "dd/MM/yyyy");
+  let text = `<b>—— Calendário Econômico ${date} ——</b> \n`;
+  console.log("Enviando: " + text);
+
+  for (let i = 0; i < events.length; i++) {
+    let event = events[i];
+    let [our, minutes] = event.time.split(":");
+    if (parseInt(our) >= 8 && parseInt(our) <= 18) {
+      if (parseInt(our) >= 10 && parseInt(minutes) >= 00 && !ibovSended) {
+        ibovSended = true;
+        text += ibovOpening;
+      }
+
+      if (parseInt(our) >= 10 && !usaSended) {
+        if (
+          (parseInt(our) == 10 && parseInt(minutes) >= 30) ||
+          parseInt(our) > 10
+        ) {
+          usaSended = true;
+          text += usaOpenig;
+        }
+      }
+      let flag = "";
+      if (event.country == "Zona Euro") {
+        flag = countryFlags["EUR"];
+      } else if (event.country == "Brasil") {
+        flag = countryFlags["BR"];
+      } else if (event.country == "China") {
+        flag = countryFlags["CN"];
+      } else {
+        flag = countryFlags[event.country];
+      }
+
+      text += `${flag} ${event.time}h -  ${event.descriptrion}.\n`;
+    }
+  }
+
+  if (!ibovSended) {
+    text += ibovOpening;
+  }
+
+  if (!usaSended) {
+    text += usaOpenig;
+  }
+
+  await bot.sendMessage(chatId, text, { parse_mode: "HTML" });
+  return text;
+}
+
 module.exports = {
   sendPanoram,
+  sendEconomicCalendar,
 };
