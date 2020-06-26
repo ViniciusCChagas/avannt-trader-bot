@@ -64,7 +64,7 @@ async function sendEconomicCalendar(req, res) {
 
   await telegramBot.sendMessage(telegramChatId, text, { parse_mode: "HTML" });
   console.log("Calendário Econômico enviado!");
-  return res.json({ text });
+  return res ? res.json({ text }) : text;
 }
 
 module.exports = {

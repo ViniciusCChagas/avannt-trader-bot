@@ -35,16 +35,18 @@ async function sendPanoram(req, res) {
         item.name
       }  -  ${percent}`;
 
-      if (diference >= 0) {
+      if (diference > 0) {
         texto += ` 🟢\n`;
-      } else {
+      } else if(diference < 0) {
         texto += ` 🔴\n`;
+      } else {
+        texto += ` ⚪️\n`;
       }
     }
   }
   await telegramBot.sendMessage(telegramChatId, texto, { parse_mode: "HTML" });
   console.log("Panorama enviado!");
-  return res.json({ texto });
+  return res ? res.json({ texto }) : texto;
 }
 
 module.exports = {
